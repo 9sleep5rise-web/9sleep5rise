@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6dXdtZmNzbHdtY3N3eGdodWdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NjA3MzIsImV4cCI6MjA5NzQzNjczMn0.j921YcOErEXQCGUU9idoYAqdJItBQeYjNQhCDKOCx48';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+    let currentUser = null;
+    let currentProfile = null;
+
     // Translations
     const translations = {
         zh: {
@@ -144,10 +147,18 @@ document.addEventListener('DOMContentLoaded', () => {
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
+            
+            const viewName = item.id.replace('nav-', '');
+            
+            // Require login for post and profile
+            if ((viewName === 'add' || viewName === 'me') && !currentUser) {
+                document.getElementById('auth-modal').style.display = 'flex';
+                return;
+            }
+
             navItems.forEach(i => i.classList.remove('active'));
             item.classList.add('active');
             
-            const viewName = item.id.replace('nav-', '');
             if (viewName !== 'add') {
                 switchView(viewName);
             } else {
@@ -195,6 +206,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     checkinBtn.addEventListener('click', () => {
+        if (!currentUser) {
+            document.getElementById('auth-modal').style.display = 'flex';
+            return;
+        }
         const lang = langSwitcher.value;
         alert(translations[lang].success_msg);
         addMockPost(ritualStatus.textContent);
@@ -311,9 +326,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadPosts() {
         try {
+            // Join with profiles table to get author details
             const { data: posts, error } = await supabase
                 .from('posts')
-                .select('*')
+                .select('*, profiles(nickname, avatar_url)')
                 .order('created_at', { ascending: false });
                 
             if (error) throw error;
@@ -336,12 +352,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const date = new Date(post.created_at);
                 const timeString = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                // Get profile details or fallbacks
+                const authorName = post.profiles?.nickname || '匿名用户';
+                const authorAvatar = post.profiles?.avatar_url 
+                    ? `url(${post.profiles.avatar_url})` 
+                    : 'linear-gradient(135deg, #fb923c, #6366f1)';
 
                 newPost.innerHTML = `
                     <div class="post-header">
-                        <div class="avatar" style="background: linear-gradient(135deg, #fb923c, #6366f1);"></div>
+                        <div class="avatar" style="background: ${authorAvatar}; background-size: cover; background-position: center;"></div>
                         <div>
-                            <p class="username">Me</p>
+                            <p class="username">${authorName}</p>
                             <p style="font-size: 10px; color: var(--text-muted);">${timeString}</p>
                         </div>
                     </div>
@@ -360,6 +382,156 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Error loading posts:", error);
         }
     }
+
+    // ==========================================
+    // AUTH & PROFILE LOGIC
+    // ==========================================
+    
+    // Auth DOM Elements
+    const authModal = document.getElementById('auth-modal');
+    const authEmail = document.getElementById('auth-email');
+    const authOtp = document.getElementById('auth-otp');
+    const sendOtpBtn = document.getElementById('send-otp-btn');
+    const verifyOtpBtn = document.getElementById('verify-otp-btn');
+    const authStep1 = document.getElementById('auth-step-1');
+    const authStep2 = document.getElementById('auth-step-2');
+    const backToEmailBtn = document.getElementById('back-to-email-btn');
+
+    // Profile DOM Elements
+    const profileAvatar = document.getElementById('profile-avatar');
+    const profileNickname = document.getElementById('profile-nickname');
+    const profileEmail = document.getElementById('profile-email');
+    const editNicknameBtn = document.getElementById('edit-nickname-btn');
+    const avatarUploadInput = document.getElementById('avatar-upload');
+    const signOutBtn = document.getElementById('sign-out-btn');
+
+    // 1. Listen for Auth State Changes
+    supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session) {
+            currentUser = session.user;
+            authModal.style.display = 'none';
+            await loadProfile();
+            loadPosts(); // Reload to show updated names if any changed
+        } else {
+            currentUser = null;
+            currentProfile = null;
+            // Optionally auto-show modal, but we handle it via nav clicks
+        }
+    });
+
+    // 2. Auth Actions
+    sendOtpBtn.addEventListener('click', async () => {
+        const email = authEmail.value.trim();
+        if (!email) return alert('请输入邮箱');
+        sendOtpBtn.textContent = '发送中...';
+        sendOtpBtn.disabled = true;
+        
+        const { error } = await supabase.auth.signInWithOtp({ email });
+        sendOtpBtn.textContent = '发送验证码';
+        sendOtpBtn.disabled = false;
+        
+        if (error) {
+            alert('发送失败: ' + error.message);
+        } else {
+            authStep1.style.display = 'none';
+            authStep2.style.display = 'block';
+        }
+    });
+
+    verifyOtpBtn.addEventListener('click', async () => {
+        const email = authEmail.value.trim();
+        const token = authOtp.value.trim();
+        if (!token) return alert('请输入验证码');
+        verifyOtpBtn.textContent = '验证中...';
+        verifyOtpBtn.disabled = true;
+        
+        const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+        verifyOtpBtn.textContent = '验证并登录';
+        verifyOtpBtn.disabled = false;
+        
+        if (error) {
+            alert('验证码错误: ' + error.message);
+        } else {
+            authOtp.value = '';
+            authStep1.style.display = 'block';
+            authStep2.style.display = 'none';
+        }
+    });
+
+    backToEmailBtn.addEventListener('click', () => {
+        authStep1.style.display = 'block';
+        authStep2.style.display = 'none';
+    });
+
+    signOutBtn.addEventListener('click', async () => {
+        await supabase.auth.signOut();
+        alert('已退出登录');
+        document.getElementById('nav-home').click();
+    });
+
+    // 3. Profile Actions
+    async function loadProfile() {
+        if (!currentUser) return;
+        profileEmail.textContent = currentUser.email;
+        
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single();
+            
+        if (error) {
+            console.error('加载资料失败', error);
+            return;
+        }
+        currentProfile = data;
+        profileNickname.textContent = data.nickname || '新用户';
+        if (data.avatar_url) {
+            profileAvatar.style.backgroundImage = `url(${data.avatar_url})`;
+        } else {
+            profileAvatar.style.backgroundImage = 'linear-gradient(135deg, #fb923c, #6366f1)';
+        }
+    }
+
+    editNicknameBtn.addEventListener('click', async () => {
+        const newName = prompt('请输入新昵称:', profileNickname.textContent);
+        if (newName && newName.trim() !== '') {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ nickname: newName.trim() })
+                .eq('id', currentUser.id);
+                
+            if (error) {
+                alert('更新失败: ' + error.message);
+            } else {
+                await loadProfile();
+                loadPosts(); // Refresh feed to update UI
+            }
+        }
+    });
+
+    avatarUploadInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        profileAvatar.style.opacity = '0.5';
+        
+        const filename = `${currentUser.id}-${Date.now()}.jpg`;
+        const { error: uploadError } = await supabase.storage.from('avatars').upload(filename, file);
+        
+        if (uploadError) {
+            alert('上传头像失败: ' + uploadError.message);
+            profileAvatar.style.opacity = '1';
+            return;
+        }
+        
+        const { data } = supabase.storage.from('avatars').getPublicUrl(filename);
+        await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', currentUser.id);
+        
+        await loadProfile();
+        loadPosts(); // Refresh feed
+        profileAvatar.style.opacity = '1';
+    });
 
     // Init
     loadPosts();
