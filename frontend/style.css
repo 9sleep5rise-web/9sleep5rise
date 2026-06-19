@@ -1,0 +1,316 @@
+:root {
+    /* Colors */
+    --primary-morning: #fb923c;
+    --primary-night: #6366f1;
+    --primary-fasting: #4ade80;
+    --bg-dark: #1a2421;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-blur: blur(12px);
+    
+    /* Spacing */
+    --safe-area-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+/* View Management */
+.view {
+    display: none;
+    flex-direction: column;
+}
+
+.view.active {
+    display: flex;
+}
+
+/* RTL Support */
+body.rtl {
+    direction: rtl;
+    font-family: 'Noto Sans Arabic', sans-serif;
+}
+
+body.rtl .post-header {
+    flex-direction: row-reverse;
+}
+
+body.rtl .post-actions {
+    flex-direction: row-reverse;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    overflow-x: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Background Engine */
+.app-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    transition: opacity 1s ease-in-out;
+    background-size: cover;
+    background-position: center;
+}
+
+.app-bg.morning { background-image: url('images/morning.png'); }
+.app-bg.night { background-image: url('images/night.png'); }
+.app-bg.meal { background-image: url('images/meal.png'); }
+
+.bg-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(26, 36, 33, 0.2), rgba(26, 36, 33, 0.9));
+}
+
+/* Glass Components */
+.glass {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+}
+
+/* Navigation */
+nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 12px 24px calc(12px + var(--safe-area-bottom));
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 100;
+    background: rgba(26, 36, 33, 0.8);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--glass-border);
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 10px;
+    transition: color 0.3s ease;
+}
+
+.nav-item.active {
+    color: var(--primary-morning);
+}
+
+.nav-icon {
+    font-size: 20px;
+    margin-bottom: 2px;
+}
+
+/* Main Content Area */
+main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    padding-bottom: 120px;
+}
+
+/* Ritual Hub Card */
+.ritual-card {
+    padding: 32px 24px;
+    text-align: center;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.ritual-title {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.ritual-time {
+    font-size: 42px;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.check-in-btn {
+    background: linear-gradient(135deg, var(--primary-morning), #f97316);
+    border: none;
+    padding: 16px 48px;
+    border-radius: 50px;
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    box-shadow: 0 10px 25px rgba(249, 115, 22, 0.3);
+    cursor: pointer;
+    transition: transform 0.2s active, box-shadow 0.2s;
+}
+
+.check-in-btn:active {
+    transform: scale(0.95);
+}
+
+/* Feed Section */
+.feed-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.post {
+    margin-bottom: 16px;
+    padding: 16px;
+}
+
+.post-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #475569;
+}
+
+.username {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.post-content {
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.post-actions {
+    display: flex;
+    gap: 20px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* Custom Scrollbar */
+main::-webkit-scrollbar {
+    width: 6px;
+}
+main::-webkit-scrollbar-track {
+    background: transparent;
+}
+main::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+/* Multimedia Placeholders */
+.media-content {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 12px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.audio-wave {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+}
+
+.wave-bar {
+    width: 3px;
+    background: var(--primary-morning);
+    border-radius: 2px;
+    animation: wave 1.2s ease-in-out infinite;
+}
+
+@keyframes wave {
+    0%, 100% { height: 4px; }
+    50% { height: 16px; }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+    animation: fadeIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* Bottom Nav Glow */
+.nav-glow {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 20px;
+    background: var(--primary-morning);
+    filter: blur(25px);
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* Responsive adjustments */
+@media (min-width: 768px) {
+    body {
+        max-width: 480px;
+        margin: 0 auto;
+        border-left: 1px solid var(--glass-border);
+        border-right: 1px solid var(--glass-border);
+        box-shadow: 0 0 100px rgba(0,0,0,0.5);
+    }
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    width: 90%;
+    max-width: 400px;
+}
