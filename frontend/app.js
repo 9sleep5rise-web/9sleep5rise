@@ -457,10 +457,15 @@ document.addEventListener('DOMContentLoaded', () => {
             .eq('id', currentUser.id)
             .single();
             
-        if (error) {
-            console.error('加载资料失败', error);
+        // Graceful fallback if profile row doesn't exist (e.g. users registered before trigger)
+        if (error || !data) {
+            console.error('加载资料失败或无数据:', error);
+            currentProfile = { nickname: '新用户' };
+            profileNickname.textContent = '新用户';
+            profileAvatar.style.backgroundImage = 'linear-gradient(135deg, #fb923c, #6366f1)';
             return;
         }
+        
         currentProfile = data;
         profileNickname.textContent = data.nickname || '新用户';
         if (data.avatar_url) {
