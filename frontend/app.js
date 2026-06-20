@@ -390,12 +390,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auth DOM Elements
     const authModal = document.getElementById('auth-modal');
     const authEmail = document.getElementById('auth-email');
-    const authOtp = document.getElementById('auth-otp');
     const sendOtpBtn = document.getElementById('send-otp-btn');
-    const verifyOtpBtn = document.getElementById('verify-otp-btn');
-    const authStep1 = document.getElementById('auth-step-1');
-    const authStep2 = document.getElementById('auth-step-2');
-    const backToEmailBtn = document.getElementById('back-to-email-btn');
+    const magicLinkMsg = document.getElementById('magic-link-msg');
 
     // Profile DOM Elements
     const profileAvatar = document.getElementById('profile-avatar');
@@ -419,48 +415,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 2. Auth Actions
+    // 2. Auth Actions (Magic Link)
     sendOtpBtn.addEventListener('click', async () => {
         const email = authEmail.value.trim();
         if (!email) return alert('请输入邮箱');
         sendOtpBtn.textContent = '发送中...';
         sendOtpBtn.disabled = true;
+        magicLinkMsg.style.display = 'none';
         
-        const { error } = await supabase.auth.signInWithOtp({ email });
-        sendOtpBtn.textContent = '发送验证码';
+        const { error } = await supabase.auth.signInWithOtp({ 
+            email,
+            options: {
+                emailRedirectTo: 'https://9sleep5rise.com'
+            }
+        });
+        
+        sendOtpBtn.textContent = '发送登录链接';
         sendOtpBtn.disabled = false;
         
         if (error) {
             alert('发送失败: ' + error.message);
         } else {
-            authStep1.style.display = 'none';
-            authStep2.style.display = 'block';
+            magicLinkMsg.style.display = 'block';
         }
-    });
-
-    verifyOtpBtn.addEventListener('click', async () => {
-        const email = authEmail.value.trim();
-        const token = authOtp.value.trim();
-        if (!token) return alert('请输入验证码');
-        verifyOtpBtn.textContent = '验证中...';
-        verifyOtpBtn.disabled = true;
-        
-        const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
-        verifyOtpBtn.textContent = '验证并登录';
-        verifyOtpBtn.disabled = false;
-        
-        if (error) {
-            alert('验证码错误: ' + error.message);
-        } else {
-            authOtp.value = '';
-            authStep1.style.display = 'block';
-            authStep2.style.display = 'none';
-        }
-    });
-
-    backToEmailBtn.addEventListener('click', () => {
-        authStep1.style.display = 'block';
-        authStep2.style.display = 'none';
     });
 
     signOutBtn.addEventListener('click', async () => {
