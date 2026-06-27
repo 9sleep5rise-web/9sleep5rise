@@ -326,16 +326,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadPosts() {
         try {
-            // Join with profiles table to get author details
+            // First, fetch all posts (no join to avoid foreign key crashes)
             const { data: posts, error } = await supabase
                 .from('posts')
-                .select('*, profiles(nickname, avatar_url)')
+                .select('*')
                 .order('created_at', { ascending: false });
                 
             if (error) throw error;
             
             const feedList = document.getElementById('feed-list');
             feedList.innerHTML = '';
+            
+            // Extract all unique user_ids
+            const userIds = [...new Set(posts.map(p => p.user_id).filter(Boolean))];
+            
+            // Fetch profiles separately
+            let profilesMap = {};
+            if (userIds.length > 0) {
+                const { data: profilesData, error: profError } = await supabase
+                    .from('profiles')
+                    .select('id, nickname, avatar_url')
+                    .in('id', userIds);
+                    
+                if (!profError && profilesData) {
+                    profilesData.forEach(p => {
+                        profilesMap[p.id] = p;
+                    });
+                }
+            }
             
             posts.forEach(post => {
                 const newPost = document.createElement('div');
@@ -353,10 +371,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const date = new Date(post.created_at);
                 const timeString = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 
-                // Get profile details or fallbacks
-                const authorName = post.profiles?.nickname || '匿名用户';
-                const authorAvatar = post.profiles?.avatar_url 
-                    ? `url(${post.profiles.avatar_url})` 
+                // Match profile data safely
+                const prof = profilesMap[post.user_id] || {};
+                const authorName = prof.nickname || '匿名用户';
+                const authorAvatar = prof.avatar_url 
+                    ? `url(${prof.avatar_url})` 
                     : 'linear-gradient(135deg, #fb923c, #6366f1)';
 
                 newPost.innerHTML = `
@@ -449,26 +468,39 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Profile Actions
     // 加载并显示个人资料(头像、昵称、邮箱)
     async function loadProfile() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
 
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+          document.getElementById('profile-email').textContent = user.email || '';
 
-      if (error) {
-        console.error('加载资料失败:', error);
-        return;
-      }
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
 
-      // 把数据真正显示到页面上
-      document.getElementById('profile-nickname').textContent = profile.nickname;
-      document.getElementById('profile-email').textContent = user.email;
+          // 无论数据库有没有查到记录，都给一个默认显示，绝对不卡死在“加载中”
+          let nickname = '新用户';
+          let avatarUrl = null;
 
-      if (profile.avatar_url) {
-        document.getElementById('profile-avatar').style.backgroundImage = `url(${profile.avatar_url})`;
+          if (profile) {
+              nickname = profile.nickname || '新用户';
+              avatarUrl = profile.avatar_url;
+          } else if (error) {
+              console.error('查无此人或加载资料失败(很可能是老账号):', error);
+          }
+
+          document.getElementById('profile-nickname').textContent = nickname;
+
+          if (avatarUrl) {
+            document.getElementById('profile-avatar').style.backgroundImage = `url(${avatarUrl})`;
+          } else {
+            document.getElementById('profile-avatar').style.backgroundImage = 'linear-gradient(135deg, #fb923c, #6366f1)';
+          }
+      } catch (err) {
+          console.error("加载Profile时发生崩溃:", err);
+          document.getElementById('profile-nickname').textContent = '加载出错';
       }
     }
 
