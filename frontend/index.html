@@ -128,7 +128,7 @@
                 <p id="profile-email" style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">---</p>
             </div>
             <div class="glass animate-in" style="padding: 12px; animation-delay: 0.1s;">
-                <div style="padding: 16px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between;">
+                <div style="padding: 16px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; cursor: pointer;" onclick="showMyPosts()">
                     <span data-i18n="my_posts">我的发布</span>
                     <span>></span>
                 </div>
@@ -141,6 +141,17 @@
                     <span>🚪</span>
                 </div>
             </div>
+        </div>
+
+        <!-- View: My Posts -->
+        <div id="view-my-posts" class="view" style="display:none; padding: 16px;">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+                <span onclick="document.getElementById('view-my-posts').style.display='none';
+                               document.getElementById('view-me').classList.add('active');"
+                      style="cursor:pointer; font-size:20px;">←</span>
+                <h2>我的发布</h2>
+            </div>
+            <div id="my-posts-list"></div>
         </div>
     </main>
 

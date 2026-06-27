@@ -544,6 +544,100 @@ document.addEventListener('DOMContentLoaded', () => {
         profileAvatar.style.opacity = '1';
     });
 
+    // ==========================================
+    // MY POSTS LOGIC
+    // ==========================================
+    
+    // 显示"我的发布"页面
+    window.showMyPosts = function() {
+        // 隐藏所有 view
+        document.querySelectorAll('.view').forEach(v => {
+            v.classList.remove('active');
+            v.style.display = '';
+        });
+        // 显示"我的发布"页面
+        const myPostsView = document.getElementById('view-my-posts');
+        myPostsView.style.display = 'block';
+        loadMyPosts();
+    };
+
+    // 加载"我的发布"(只显示当前登录用户的帖子)
+    async function loadMyPosts() {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        try {
+            const { data: posts, error } = await supabase
+                .from('posts')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            const myPostsList = document.getElementById('my-posts-list');
+            
+            if (!posts || posts.length === 0) {
+                myPostsList.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 32px;">还没有发布过内容</p>';
+                return;
+            }
+
+            myPostsList.innerHTML = '';
+            
+            // Get current profile for rendering
+            let currentNickname = '我';
+            let currentAvatar = 'linear-gradient(135deg, #fb923c, #6366f1)';
+            
+            // Re-fetch profile to be safe or use global if available
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+                
+            if (profile) {
+                if (profile.nickname) currentNickname = profile.nickname;
+                if (profile.avatar_url) currentAvatar = `url(${profile.avatar_url})`;
+            }
+
+            posts.forEach(post => {
+                const item = document.createElement('div');
+                item.className = 'post glass animate-in';
+
+                let mediaHtml = '';
+                if (post.media_url) {
+                    if (post.media_type === 'video') {
+                        mediaHtml = `<video src="${post.media_url}" controls style="width:100%; border-radius:8px; margin-bottom:12px;"></video>`;
+                    } else {
+                        mediaHtml = `<img src="${post.media_url}" style="width:100%; border-radius:8px; margin-bottom:12px;">`;
+                    }
+                }
+
+                const date = new Date(post.created_at);
+                const timeString = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                item.innerHTML = `
+                    <div class="post-header">
+                        <div class="avatar" style="background: ${currentAvatar}; background-size: cover; background-position: center;"></div>
+                        <div>
+                            <p class="username">${currentNickname}</p>
+                            <p style="font-size:10px; color:var(--text-muted);">${timeString}</p>
+                        </div>
+                    </div>
+                    <div class="post-content">${post.content}</div>
+                    ${mediaHtml}
+                    <div class="post-actions">
+                        <span>👏 0</span>
+                        <span>💬 0</span>
+                    </div>
+                `;
+                myPostsList.appendChild(item);
+            });
+        } catch (error) {
+            console.error('加载我的发布失败:', error);
+        }
+    }
+
     // Init
     loadPosts();
     setInterval(updateClock, 1000);
