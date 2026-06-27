@@ -161,6 +161,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (viewName !== 'add') {
                 switchView(viewName);
+                if (viewName === 'me' && currentUser) {
+                    loadProfile();
+                }
             } else {
                 document.getElementById('media-upload').click();
             }
